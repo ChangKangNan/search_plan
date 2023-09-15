@@ -96,4 +96,39 @@ public class RegxUtil {
         }
         return infos;
     }
+
+
+    public static String getMainTableNameBySub(String cup) {
+        Matcher matcher = MainTableNameReg.matcher(cup);
+        if (matcher.find()) {
+            return matcher.group(2);
+        }
+        return null;
+    }
+
+
+    public static String getReplaceRemark(String cup) {
+        Matcher matcher = ReplaceRemarkReg.matcher(cup);
+        if (matcher.find()) {
+            return matcher.group();
+        }
+        return null;
+    }
+
+
+    public static String getAliasNameBySub(String cup) {
+        Matcher matcher = AliasReg.matcher(cup);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return null;
+    }
+
+    public static String getNameBySub(String cup) {
+        Matcher matcher = NameReg.matcher(cup);
+        if (matcher.find()) {
+            return matcher.group(3);
+        }
+        return null;
+    }
 }

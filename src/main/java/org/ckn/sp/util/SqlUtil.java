@@ -2,16 +2,17 @@ package org.ckn.sp.util;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ArrayUtil;
+import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.StrUtil;
 import org.ckn.sp.fm.bean.SearchTableColumn;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.ckn.sp.constants.StrConstants.*;
+import static org.ckn.sp.util.RegxUtil.JOIN_SPLIT;
 
 /**
  * @author ckn
@@ -207,4 +208,63 @@ public class SqlUtil {
         return strings.length == 2 ? strings[1].trim() : (strings[0].trim().contains(".") ? strings[0].trim().split("\\.")[1].trim() : strings[0].trim());
     }
 
+
+    public static Map<String, String> getTableNameNotInExtends(String str, String[] relationTables) {
+        String replaceAll = str.replaceAll("\\son\\s.*", "");
+        String[] strings = replaceAll.split(JOIN_SPLIT);
+        Map<String, String> stringMap = new HashMap<>();
+        for (String string : strings) {
+            String trimStart = StrUtil.trimStart(string);
+            String[] split = trimStart.split(StrUtil.SPACE);
+            String tb = split.length > 1 ? split[1].trim() : split[0].trim();
+            if (!ArrayUtil.contains(relationTables, tb)) {
+                continue;
+            }
+            stringMap.put(tb, split[0].trim());
+        }
+        return stringMap;
+    }
+
+
+    public static List<String> getMatchColumn(String column) {
+        List<String> list = new ArrayList<>();
+        Pattern pattern = Pattern.compile("[\\w.]+");
+        Matcher matcher = pattern.matcher(column);
+        while (matcher.find()) {
+            String group = matcher.group().trim();
+            if (!StrUtil.containsAnyIgnoreCase(group, ".", "'") && !StrUtil.equalsAnyIgnoreCase(
+                    group,
+                    "distinct",
+                    "true", "false",
+                    "CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP", "CURRENT_USER", "LOCALTIME",
+                    "ALL", "ANY", "and", "or", "sum", "avg", "to_days", "if", "is", "null", "as") && (!NumberUtil.isNumber(group))) {
+                int endIndex = column.indexOf(group) + group.length();
+                if (endIndex <= (column.length() - 1)) {
+                    String para = column.charAt(endIndex) + "";
+                    if (StrUtil.equalsAny(para, "(", ")", "'")) {
+                        continue;
+                    }
+                }
+                list.add(group);
+            }
+        }
+        return list;
+    }
+
+
+   public static Set<String> getMatchTable(String sql) {
+        Pattern pattern = Pattern.compile("[\\w]+\\.");
+        Matcher matcher = pattern.matcher(sql);
+        Set<String> tbSet = new HashSet<>();
+        while (matcher.find()) {
+            String group = matcher.group();
+            if (group.contains(".")) {
+                String prefix = group.substring(0, group.length() - 1);
+                if (!NumberUtil.isNumber(prefix)) {
+                    tbSet.add(prefix);
+                }
+            }
+        }
+        return tbSet;
+    }
 }
