@@ -13,12 +13,14 @@ import org.ckn.sp.fm.dao.SearchConfigMapper;
 import org.ckn.sp.fm.dao.SearchDatasourceMapper;
 import org.ckn.sp.fm.dao.SearchDatasourceRelationMapper;
 import org.ckn.sp.service.IPlanSpiltService;
+import org.ckn.sp.service.ISearchPlanService;
 import org.ckn.sp.strategy.GenerateInsertStrategy;
 import org.ckn.sp.strategy.GenerateUpdateStrategy;
 import org.ckn.sp.strategy.api.IGenerateStrategy;
 import org.ckn.sp.util.ErrorUtil;
 import org.ckn.sp.util.RegxUtil;
 import org.ckn.sp.util.SqlUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
@@ -38,8 +40,10 @@ import static org.ckn.sp.util.PinyinUtil.getPinyin;
  */
 @Service
 public class PlanSpiltServiceImpl implements IPlanSpiltService {
+    @Autowired
+    ISearchPlanService searchPlanService;
 
-    private Map<String, IGenerateStrategy> handleList =new HashMap<String, IGenerateStrategy>(){{
+    private final Map<String, IGenerateStrategy> handleList =new HashMap<String, IGenerateStrategy>(){{
         put("INSERT",new GenerateInsertStrategy());
         put("UPDATE",new GenerateUpdateStrategy());
     }};
@@ -77,20 +81,29 @@ public class PlanSpiltServiceImpl implements IPlanSpiltService {
                 searchConfigId = search.getId();
                 IGenerateStrategy strategy = handleList.get("INSERT");
                 strategy.handle(searchConfig);
-                //生成config_info
-                //生成查询方案配置组件
                 ////默认方案生成
+                searchPlanService.generateDefault(pageTag);
             } else {
                 //更新
                 searchConfigId = searchConfig.getId();
                 //校验hex
                 String hasCode = searchConfig.getHasCode();
+                if (hasCode.equals(hex)) {
+                    throw new RuntimeException("内容无更改无需更新!");
+                }
+                Integer oriVersion = RegxUtil.getVersion(searchConfig.getSearchSql());
+                Integer currentVersion = RegxUtil.getVersion(sql);
+                if (Objects.equals(currentVersion, oriVersion)) {
+                    throw new RuntimeException("内容有更新,请调整版本号!");
+                }
+                if (currentVersion < oriVersion) {
+                    throw new RuntimeException("当前操作的查询方案版本过低,请更新后重新执行!");
+                }
                 IGenerateStrategy strategy = handleList.get("UPDATE");
                 strategy.handle(searchConfig);
-                //更新主表
-                //更新config_info
-                //重新生成查询方案配置组件
-                //默认方案与用户方案重新生成
+                searchPlanService.generateDefault(pageTag);
+                //用户方案重新生成
+                searchPlanService.generateUserOverride(pageTag);
             }
             //数据源配置统一更新
             handleDataSource(dataSourceName, searchConfigId);

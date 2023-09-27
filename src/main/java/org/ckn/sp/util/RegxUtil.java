@@ -131,4 +131,13 @@ public class RegxUtil {
         }
         return null;
     }
+
+    public static String getAliasName(String str) {
+        Pattern compile = Pattern.compile("/\\*alias(.*)\\*/");
+        Matcher matcher = compile.matcher(str);
+        if (matcher.find()) {
+            return matcher.group(1).trim();
+        }
+        return null;
+    }
 }
