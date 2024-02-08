@@ -6,4 +6,8 @@ package org.ckn.sp.service;
  */
 public interface IPlanSpiltService {
     void split(String sqlPath);
+    /**
+     *同步查询方案
+     */
+    Boolean syncSearchPlan(String resourceName);
 }

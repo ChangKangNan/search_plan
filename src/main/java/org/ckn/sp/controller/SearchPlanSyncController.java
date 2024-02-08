@@ -1,5 +1,6 @@
 package org.ckn.sp.controller;
 
+import org.ckn.sp.service.IPlanSpiltService;
 import org.ckn.sp.service.ISearchPlanService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -18,10 +19,12 @@ import java.util.Map;
 public class SearchPlanSyncController {
     @Resource
     ISearchPlanService searchPlanService;
+    @Resource
+    IPlanSpiltService planSpiltService;
 
     @PutMapping
     public boolean sync(String resourceName) {
-        searchPlanService.syncSearchPlan(resourceName);
+        planSpiltService.syncSearchPlan(resourceName);
         return true;
     }
 

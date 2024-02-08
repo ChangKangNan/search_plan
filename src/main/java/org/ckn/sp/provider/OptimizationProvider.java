@@ -86,10 +86,6 @@ public class OptimizationProvider {
                 }
                 String extendSql_replace = updateSQL.get(targetTableName);
                 String extendSql = StrUtil.isBlank(extendSql_replace) ? searchExtendTable.getExtendSql() : extendSql_replace;
-                int begin_index = packageSql.indexOf(extendSql);
-                int end_index = packageSql.indexOf(extendSql) + extendSql.length();
-                String prefix_sql = packageSql.substring(0, begin_index);
-                String suffix_sql = packageSql.substring(end_index);
                 SearchConfigInnerCondition searchConfigInnerCondition = new SearchConfigInnerCondition();
                 searchConfigInnerCondition.setSearchType(configInfo.getSearchType());
                 String[] split = queryInfo.getSearchKey().split("\\.");

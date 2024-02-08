@@ -8,6 +8,7 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import org.ckn.sp.annotation.InsertStrategyOrder;
+import org.ckn.sp.annotation.UpdateStrategyOrder;
 import org.ckn.sp.fm.action.SearchPlanNewConditionAction;
 import org.ckn.sp.fm.bean.SearchConfig;
 import org.ckn.sp.fm.bean.SearchConfigInfo;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
  * @author ckn
  */
 @InsertStrategyOrder
+@UpdateStrategyOrder
 public class SearchInfoISplitStrategy implements ISplitStrategy {
 
     @Override
@@ -60,10 +62,10 @@ public class SearchInfoISplitStrategy implements ISplitStrategy {
             }
             infos.add(baseInfo);
         }
-        IChangeTableService changeTableService = SpringUtil.getBean(IChangeTableService.class);
-        changeTableService.handleChangeTable(searchConfig, infos);
         //校验更新与插入
         handSearchConfigInfo(pageTag, infos);
+        IChangeTableService changeTableService = SpringUtil.getBean(IChangeTableService.class);
+        changeTableService.handleChangeTable(searchConfig, infos);
     }
 
 
@@ -96,6 +98,8 @@ public class SearchInfoISplitStrategy implements ISplitStrategy {
                 for (SearchConfigInfo t : updateList) {
                     SearchConfigInfo configInfo = collect.get(t.getSearchKey());
                     t.setId(configInfo.getId());
+                    t.setCreateTime(configInfo.getCreateTime());
+                    t.setDeleted(configInfo.getDeleted());
                     SearchConfigInfoMapper.lambdaUpdate().id().equal(configInfo.getId()).updateOverride(t);
                     //刷新所有用户方案对应输入框的类型
                     if (t.getLimitSearchConditions().equals(configInfo.getLimitSearchConditions())) {

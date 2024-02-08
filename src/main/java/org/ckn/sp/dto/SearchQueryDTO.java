@@ -1,6 +1,7 @@
 package org.ckn.sp.dto;
 
 import lombok.Data;
+import lombok.experimental.Accessors;
 
 import java.io.Serializable;
 import java.util.List;
@@ -22,6 +23,7 @@ public class SearchQueryDTO implements Serializable {
     private List<QueryInfo> queryInfoList;
 
     @Data
+    @Accessors(chain = true)
     public static class QueryInfo implements Serializable{
         private static final long serialVersionUID = 1L;
         /**

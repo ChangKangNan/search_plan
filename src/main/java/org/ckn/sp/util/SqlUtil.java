@@ -44,33 +44,66 @@ public class SqlUtil {
         return index;
     }
 
+    public static int getIndexByKey(String sql,String key){
+        char at = key.charAt(0);
+        int black = 0;
+        for (int i = 0; i < sql.length(); i++) {
+            char charAt = sql.charAt(i);
+            if(charAt == '('){
+                black++;
+            }
+            if(charAt == ')'){
+                black--;
+            }
+            if (charAt == at && black == 0) {
+                String str = sql.substring(i, i + key.length());
+                if (StrUtil.equalsIgnoreCase(str, key)) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    public static Pair<String,String> getColumnInfoBySQLColumn(String column){
+        boolean as = StrUtil.containsIgnoreCase(column, AS);
+        if (as) {
+            String[] columnDetail = column.split("(?i)" + AS);
+            return new Pair<>(columnDetail[1].trim(),columnDetail[0].trim());
+        } else {
+            //此时存在可能为空格的别名
+            String trim = column.trim();
+            int SPACE_INDEX = getIndexByKey(trim, StrUtil.SPACE);
+            if (SPACE_INDEX != -1) {
+                return new Pair<>(column.substring(0, SPACE_INDEX), column.substring(SPACE_INDEX).trim());
+            } else {
+                String[] split = trim.split("\\.");
+                if (split.length == 2) {
+                    return new Pair<>(split[1].trim(), trim);
+                } else {
+                    return new Pair<>(split[0].trim(), split[0].trim());
+                }
+            }
+        }
+    }
 
     public static List<SearchTableColumn> getColumns(String sql) {
+        if (StrUtil.indexOfIgnoreCase(sql, SELECT) == -1) {
+            throw new RuntimeException("sql异常!");
+        }
         //筛选对应列
-        sql = StrUtil.subByCodePoint(sql, StrUtil.indexOfIgnoreCase(sql, SELECT), StrUtil.indexOfIgnoreCase(sql, FROM));
+        sql = StrUtil.subByCodePoint(sql, StrUtil.indexOfIgnoreCase(sql, SELECT) + 6, getIndexByKey(sql,FROM));
         //找寻处理所有备注信息
         sql = sql.replaceAll("#(.*)\n", "#");
         sql = sql.replaceAll("(,(\\s+)#)", ",#");
         sql = StrUtil.removePrefixIgnoreCase(sql, "#");
-        sql = StrUtil.removePrefixIgnoreCase(sql, SELECT);
         List<String> columns = getMatchColumns(sql);
         List<SearchTableColumn> columnList = new ArrayList<>();
         for (String column : columns) {
             SearchTableColumn searchTableColumn = new SearchTableColumn();
-            boolean as = StrUtil.containsIgnoreCase(column, AS);
-            if (as) {
-                String[] split = column.split("(?i)" + AS);
-                searchTableColumn.setSearchTableColumnInfo(split[0].trim());
-                searchTableColumn.setSearchTableColumn(split[1].trim());
-            } else {
-                searchTableColumn.setSearchTableColumnInfo(column.trim());
-                String[] split = column.split("\\.");
-                if (split.length == 2) {
-                    searchTableColumn.setSearchTableColumn(split[1].trim());
-                } else {
-                    searchTableColumn.setSearchTableColumn(column.trim());
-                }
-            }
+            Pair<String, String> infoBySQLColumn = getColumnInfoBySQLColumn(column);
+            searchTableColumn.setSearchTableColumn(infoBySQLColumn.getKey());
+            searchTableColumn.setSearchTableColumnInfo(infoBySQLColumn.getValue());
             columnList.add(searchTableColumn);
         }
         return columnList;
@@ -128,7 +161,7 @@ public class SqlUtil {
 
 
     public static String[] getExtendTables(String sql) {
-        int from = sql.toLowerCase().indexOf(FROM);
+        int from = SqlUtil.getIndexByKey(sql,FROM);
         int where = sql.toLowerCase().lastIndexOf(WHERE);
         String str = sql.substring(from, where);
         int count = 0;
@@ -695,13 +728,8 @@ public class SqlUtil {
                 boolean b = string.toLowerCase().contains(" as ");
                 boolean c = string.toLowerCase().contains(")as ");
                 if (b || c) {
-                    String[] split;
-                    if (b) {
-                        split = string.split("(?i) as ");
-                    } else {
-                        split = string.split("(?i)as ");
-                    }
-                    column.add(StrUtil.removeSuffix(split[1].trim(), ","));
+                    Pair<String, String> asKey = getAsKey(string);
+                    column.add(StrUtil.removeSuffix(asKey.getKey().trim(), ","));
                 } else {
                     int length = string.length();
                     int black = 0;
@@ -733,6 +761,26 @@ public class SqlUtil {
             }
         }
         return column;
+    }
+    public static Pair<String,String> getAsKey(String value){
+        int black = 0;
+        int end_index =0;
+        for (int j = 0; j < value.length(); j++) {
+            char charAts = value.charAt(j);
+            if (charAts == '(') {
+                black++;
+            } else if (charAts == ')') {
+                black--;
+            }
+            if (black == 0 && (!StrUtil.containsAny(value.substring(j), "+", "-", "*", "/") && StrUtil.startWithAny(value.toLowerCase().substring(j)," as ",")as "))) {
+                end_index = j;
+                break;
+            }
+        }
+        String k = value.substring(end_index);
+        k = StrUtil.removePrefixIgnoreCase(k.trim(), "as");
+        String v = value.substring(0,end_index);
+        return new Pair<>(k,v);
     }
 
     private static List<String> getColumnInfoList(String sql) {

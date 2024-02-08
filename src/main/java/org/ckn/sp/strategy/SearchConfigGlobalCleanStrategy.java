@@ -2,6 +2,7 @@ package org.ckn.sp.strategy;
 
 import cn.hutool.core.collection.CollUtil;
 import org.ckn.sp.annotation.InsertStrategyOrder;
+import org.ckn.sp.annotation.UpdateStrategyOrder;
 import org.ckn.sp.fm.bean.*;
 import org.ckn.sp.fm.dao.*;
 import org.ckn.sp.strategy.api.ISplitStrategy;
@@ -13,6 +14,7 @@ import java.util.stream.Collectors;
  * @author ckn
  */
 @InsertStrategyOrder(index = 2)
+@UpdateStrategyOrder(index = 2)
 public class SearchConfigGlobalCleanStrategy implements ISplitStrategy {
 
     @Override

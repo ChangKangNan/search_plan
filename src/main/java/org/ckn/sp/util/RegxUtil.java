@@ -23,6 +23,16 @@ public class RegxUtil {
     public static final Pattern ReplaceRemarkReg = Pattern.compile("/\\*\\s*REPLACE TO (.+)\\*/", Pattern.CASE_INSENSITIVE);
     public static final Pattern MainTableNameReg = Pattern.compile("(\\s+|\n)((\\w)+)(\\s+|/\\*|\n)", Pattern.CASE_INSENSITIVE);
     public static final Pattern matchColumnAliasReg = Pattern.compile(".*/\\*alias\\s(.*)\\*/", Pattern.CASE_INSENSITIVE);
+    public static final Pattern REL_KEY_REG = Pattern.compile(".*/\\*\\s*alias\\s*(.+)\\s*\\*/", Pattern.CASE_INSENSITIVE);
+
+    public static String getRelKeyBySearchKey(String searchKey) {
+        String str = searchKey;
+        Matcher matcher = ReplaceRemarkReg.matcher(searchKey);
+        if (matcher.find()) {
+            str = matcher.group(1);
+        }
+        return str;
+    }
 
     public static List<String> getRemarks(String markSql) {
         String sql = markSql.substring(StrUtil.indexOfIgnoreCase(markSql, SELECT), StrUtil.indexOfIgnoreCase(markSql, FROM));
@@ -30,7 +40,7 @@ public class RegxUtil {
         Pattern p = Pattern.compile("#(.*)");
         Matcher m = p.matcher(sql);
         while (m.find()) {
-            stringList.add(m.group());
+            stringList.add(m.group(1));
         }
         return stringList;
     }
@@ -57,7 +67,7 @@ public class RegxUtil {
     }
 
     public static Integer getVersion(String originalSql) {
-        Pattern p = Pattern.compile("#VERSION(.*)");
+        Pattern p = Pattern.compile("#VERSION:(.*)");
         Matcher m = p.matcher(originalSql);
         Integer version = null;
         while (m.find()) {

@@ -57,6 +57,9 @@ public class BusinessUtil {
             searchConfigInfo.setSearchType(SearchTypeEnum.input.searchType);
             searchConfigInfo.setLimitSearchConditions(SearchTypeEnum.input.limitSearchConditions);
         }
+        if (StrUtil.isBlank(searchConfigInfo.getSearchValueSource())) {
+            searchConfigInfo.setSearchValueSource(IN);
+        }
 
         return searchConfigInfo;
     }

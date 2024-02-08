@@ -15,7 +15,6 @@ import org.ckn.sp.factory.DataSourceFactory;
 import org.ckn.sp.fm.bean.*;
 import org.ckn.sp.fm.dao.*;
 import org.ckn.sp.provider.*;
-import org.ckn.sp.service.IPlanSpiltService;
 import org.ckn.sp.service.ISearchPlanService;
 import org.ckn.sp.util.CopyUtil;
 import org.ckn.sp.util.RegxUtil;
@@ -28,7 +27,6 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Resource;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.sql.ResultSetMetaData;
@@ -47,17 +45,14 @@ import static org.ckn.sp.constants.StrConstants.*;
 public class SearchPlanServiceImpl implements ISearchPlanService {
     public static FastThreadLocal<String> QUERY_SQL_LOCAL = new FastThreadLocal<>();
     public static FastThreadLocal<Map<String,Object>> QUERY_SQL_PARAM_LOCAL = new FastThreadLocal<>();
-    @Resource
-    IPlanSpiltService spiltService;
 
 
     @Override
     public void savePlan(SearchPlanDTO searchSavePlanDTO) {
         Long planId = searchSavePlanDTO.getPlanId();
-        SearchPlanNew planNew = SearchPlanNewMapper.lambdaQuery().id().equal(planId).one();
-        if (!searchSavePlanDTO.getIsDefaultChange() && (planId != null && planNew != null) && planNew.getDef()) {
-            throw new RuntimeException("默认方案不允许更新!");
-        }
+//        if (!searchSavePlanDTO.getIsDefaultChange() && (planId != null && SearchPlanNewMapper.lambdaQuery().id().equal(planId).one() != null) && SearchPlanNewMapper.lambdaQuery().id().equal(planId).one().getDef()) {
+//            throw new RuntimeException("默认方案不允许更新!");
+//        }
         if (planId != null) {
             String planName = searchSavePlanDTO.getPlanName();
             if (StrUtil.isBlank(planName)) {
@@ -99,6 +94,16 @@ public class SearchPlanServiceImpl implements ISearchPlanService {
             }
             for (SearchPlanDTO.SearchColumn searchColumn : searchColumns) {
                 if (StrUtil.equalsAny(searchColumn.getStatus(), "on", "hidden")) {
+                    boolean is_Exist = false;
+                    for (String columnName : columnNames) {
+                        if (searchColumn.getColumnName().equals(columnName)) {
+                            is_Exist = true;
+                            break;
+                        }
+                    }
+                    if (is_Exist) {
+                        continue;
+                    }
                     columnNames.add(searchColumn.getColumnName());
                 }
             }
@@ -113,7 +118,7 @@ public class SearchPlanServiceImpl implements ISearchPlanService {
             searchPlanNew.setId(null);
             SearchPlanNewMapper.lambdaInsert().insert(searchPlanNew);
         }else {
-            SearchPlanNewMapper.lambdaUpdate().id().equal(planId).updateOverride(searchPlanNew);
+            SearchPlanNewMapper.lambdaUpdate().id().equal(planId).update(searchPlanNew);
         }
 
         Long searchPlanNewId = searchPlanNew.getId();
@@ -177,7 +182,7 @@ public class SearchPlanServiceImpl implements ISearchPlanService {
             return;
         }
         List<String> allColumns = tableColumns.stream().map(SearchTableColumn::getSearchTableColumn).collect(Collectors.toList());
-        List<SearchPlanNew> searchPlanNews = SearchPlanNewMapper.lambdaQuery().pageTag().equal(pageTag).def().equal(pageTag).list();
+        List<SearchPlanNew> searchPlanNews = SearchPlanNewMapper.lambdaQuery().pageTag().equal(pageTag).def().equal(true).list();
         if(CollUtil.isEmpty(searchPlanNews)){
             return;
         }
@@ -209,6 +214,7 @@ public class SearchPlanServiceImpl implements ISearchPlanService {
             searchSavePlanDTO.setPlanName(planNew.getPlanName());
             searchSavePlanDTO.setUserAccount(planNew.getUserAccount());
             searchSavePlanDTO.setSearchColumns(searchColumns);
+            searchSavePlanDTO.setDef(planNew.getDef());
             savePlan(searchSavePlanDTO);
         }
     }
@@ -228,18 +234,6 @@ public class SearchPlanServiceImpl implements ISearchPlanService {
         return Arrays.stream(resources).collect(
                 Collectors.toMap(k -> Objects.requireNonNull(k.getFilename()).substring(0, k.getFilename().lastIndexOf(".")),
                         org.springframework.core.io.Resource::getFilename));
-    }
-
-    @Override
-    public Boolean syncSearchPlan(String resourceName) {
-        ResourcePatternResolver resourceResolver = new PathMatchingResourcePatternResolver();
-        org.springframework.core.io.Resource resource = resourceResolver.getResource("plan/" + resourceName);
-        boolean exists = resource.exists();
-        if (!exists) {
-            throw new ApiException("无可同步资源文件!");
-        }
-        spiltService.split(resourceName);
-        return true;
     }
 
     @Override
@@ -420,7 +414,7 @@ public class SearchPlanServiceImpl implements ISearchPlanService {
         QUERY_SQL_LOCAL.set(planNew.getSearchSql());
         handleSQL(queryDTO);
         DataSource dataSource = DataSourceFactory.buildDataSource(searchConfig.getId());
-        return findPage(new StringBuilder(SqlUtil.sqlConversion(QUERY_SQL_LOCAL.get())),queryDTO.getPageNum(),queryDTO.getPageSize(),QUERY_SQL_PARAM_LOCAL.get(),dataSource);
+        return findPage(new StringBuilder(SqlUtil.sqlConversion(QUERY_SQL_LOCAL.get())),queryDTO.getPageNum(),queryDTO.getPageSize(),QUERY_SQL_PARAM_LOCAL.get() == null?new HashMap<>():QUERY_SQL_PARAM_LOCAL.get(),dataSource);
     }
 
     @Override
@@ -566,16 +560,9 @@ public class SearchPlanServiceImpl implements ISearchPlanService {
         if (CollUtil.isEmpty(configInfos)) {
             return hiddenSet;
         }
-        Pattern pattern = Pattern.compile("(\\w+)/\\*alias(\\s+)(\\w+)\\*/");
         for (SearchConfigInfo info : configInfos) {
             String searchKey = info.getSearchKey().trim();
-            boolean contains = searchKey.contains("/*alias");
-            Matcher matcher = pattern.matcher(searchKey);
-            if (contains && matcher.find()) {
-                hiddenSet.add(matcher.group(3));
-            } else {
-                hiddenSet.add(searchKey);
-            }
+            hiddenSet.add(searchKey.replaceAll("(.*)/\\*\\s*alias\\s*(.+)\\s*\\*/", "$2").trim());
         }
         return hiddenSet;
     }

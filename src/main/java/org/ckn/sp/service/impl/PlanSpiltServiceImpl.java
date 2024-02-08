@@ -5,6 +5,7 @@ import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.MD5;
+import lombok.AllArgsConstructor;
 import org.ckn.sp.annotation.LoadSplitConfig;
 import org.ckn.sp.fm.bean.SearchConfig;
 import org.ckn.sp.fm.bean.SearchDatasource;
@@ -16,11 +17,9 @@ import org.ckn.sp.service.IPlanSpiltService;
 import org.ckn.sp.service.ISearchPlanService;
 import org.ckn.sp.strategy.GenerateInsertStrategy;
 import org.ckn.sp.strategy.GenerateUpdateStrategy;
-import org.ckn.sp.strategy.api.IGenerateStrategy;
 import org.ckn.sp.util.ErrorUtil;
 import org.ckn.sp.util.RegxUtil;
 import org.ckn.sp.util.SqlUtil;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
@@ -28,8 +27,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -39,14 +36,11 @@ import static org.ckn.sp.util.PinyinUtil.getPinyin;
  * @author ckn
  */
 @Service
+@AllArgsConstructor
 public class PlanSpiltServiceImpl implements IPlanSpiltService {
-    @Autowired
-    ISearchPlanService searchPlanService;
-
-    private final Map<String, IGenerateStrategy> handleList =new HashMap<String, IGenerateStrategy>(){{
-        put("INSERT",new GenerateInsertStrategy());
-        put("UPDATE",new GenerateUpdateStrategy());
-    }};
+    public final ISearchPlanService searchPlanService;
+    public final GenerateInsertStrategy generateInsertStrategy;
+    public final GenerateUpdateStrategy generateUpdateStrategy;
 
     @Override
     @Transactional
@@ -79,8 +73,7 @@ public class PlanSpiltServiceImpl implements IPlanSpiltService {
                 Optional.ofNullable(useOrgs).ifPresent(search::setUseOrgsLimitTableAlias);
                 SearchConfigMapper.lambdaInsert().insert(search);
                 searchConfigId = search.getId();
-                IGenerateStrategy strategy = handleList.get("INSERT");
-                strategy.handle(searchConfig);
+                generateInsertStrategy.handle(search);
                 ////默认方案生成
                 searchPlanService.generateDefault(pageTag);
             } else {
@@ -99,8 +92,7 @@ public class PlanSpiltServiceImpl implements IPlanSpiltService {
                 if (currentVersion < oriVersion) {
                     throw new RuntimeException("当前操作的查询方案版本过低,请更新后重新执行!");
                 }
-                IGenerateStrategy strategy = handleList.get("UPDATE");
-                strategy.handle(searchConfig);
+                generateUpdateStrategy.handle(searchConfig);
                 searchPlanService.generateDefault(pageTag);
                 //用户方案重新生成
                 searchPlanService.generateUserOverride(pageTag);
@@ -108,12 +100,13 @@ public class PlanSpiltServiceImpl implements IPlanSpiltService {
             //数据源配置统一更新
             handleDataSource(dataSourceName, searchConfigId);
         } catch (Exception e) {
+            e.printStackTrace();
             throw new ApiException(e.getMessage());
         }
     }
 
     public void handleDataSource(String dataSourceName, Long searchConfigId) {
-        if (StrUtil.isNotEmpty(dataSourceName)) {
+        if (StrUtil.isEmpty(dataSourceName)) {
             return;
         }
         SearchDatasource searchDatasource = SearchDatasourceMapper.lambdaQuery().datasourceName().equal(dataSourceName).one();
@@ -129,5 +122,17 @@ public class PlanSpiltServiceImpl implements IPlanSpiltService {
             datasourceRelation.setSearchConfigId(searchConfigId);
             SearchDatasourceRelationMapper.lambdaInsert().insert(datasourceRelation);
         }
+    }
+
+    @Override
+    public Boolean syncSearchPlan(String resourceName) {
+        ResourcePatternResolver resourceResolver = new PathMatchingResourcePatternResolver();
+        org.springframework.core.io.Resource resource = resourceResolver.getResource("plan/" + resourceName);
+        boolean exists = resource.exists();
+        if (!exists) {
+            throw new ApiException("无可同步资源文件!");
+        }
+        split(resourceName);
+        return true;
     }
 }

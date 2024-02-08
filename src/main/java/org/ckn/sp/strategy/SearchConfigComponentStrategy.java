@@ -8,6 +8,8 @@ import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.druid.pool.DruidDataSource;
+import org.ckn.sp.annotation.InsertStrategyOrder;
+import org.ckn.sp.annotation.UpdateStrategyOrder;
 import org.ckn.sp.dto.AliasDTO;
 import org.ckn.sp.fm.bean.*;
 import org.ckn.sp.fm.dao.*;
@@ -32,17 +34,22 @@ import static org.ckn.sp.util.SqlUtil.getMatchTable;
 /**
  * @author ckn
  */
+@InsertStrategyOrder(index = 3)
+@UpdateStrategyOrder(index = 3)
 public class SearchConfigComponentStrategy implements ISplitStrategy {
+
     @Override
     public void split(SearchConfig searchConfig) {
         Long searchConfigId = searchConfig.getId();
         String pageTag = searchConfig.getPageTag();
         String searchSql = searchConfig.getSearchSql();
+        searchSql = SqlUtil.replaceLineSeparator(searchSql);
         List<SearchTableColumn> columnList = SqlUtil.getColumns(searchSql);
-        String fromSQL = searchConfig.getSearchSql().substring(StrUtil.indexOfIgnoreCase(searchSql, FROM), StrUtil.lastIndexOfIgnoreCase(searchSql, WHERE));
+        String[] extendTables = SqlUtil.getExtendTables(searchSql);
+        String[] extendTableSQL = SqlUtil.getExtendTableSQL(searchSql);
+        int indexByKey = SqlUtil.getIndexByKey(searchSql, FROM);
+        String fromSQL = searchSql.substring(indexByKey,StrUtil.lastIndexOfIgnoreCase(searchSql,WHERE));
         fromSQL = StrUtil.removePrefixIgnoreCase(fromSQL, FROM);
-        String[] extendTables = SqlUtil.getExtendTables(fromSQL);
-        String[] extendTableSQL = SqlUtil.getExtendTableSQL(fromSQL);
         //当前SQL的所有表以及其字段 key:表名 value:字段列表
         Map<String, List<String>> tableColumnsMap = new HashMap<>();
 
@@ -118,16 +125,13 @@ public class SearchConfigComponentStrategy implements ISplitStrategy {
                         }
                     }
                 } catch (Exception e) {
+                    e.printStackTrace();
                     throw new RuntimeException("查询数据库列异常!");
                 }
             }
         }
 
         //生成关联表以及配置信息
-        for (int i = 0; i < extendTables.length; i++) {
-            fromSQL = cutSqlByBrackets(fromSQL, extendTables[i], extendTableSQL[i].length());
-        }
-
         String[] splitJoinTableArray = fromSQL.split(JOIN_SPLIT_AND_PREFIX);
         Map<String, String> aliasCondition = new HashMap<>();
         Map<String, String> aliasTable = new HashMap<>();

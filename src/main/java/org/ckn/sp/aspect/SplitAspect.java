@@ -9,6 +9,7 @@ import org.ckn.sp.annotation.InsertStrategyOrder;
 import org.ckn.sp.annotation.UpdateStrategyOrder;
 import org.ckn.sp.strategy.GenerateInsertStrategy;
 import org.ckn.sp.strategy.GenerateUpdateStrategy;
+import org.ckn.sp.strategy.SearchConfigComponentStrategy;
 import org.ckn.sp.strategy.api.ISplitStrategy;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -56,7 +57,8 @@ public class SplitAspect {
                 Class<?> clazz = Class.forName(classname);
                 //判断是否有指定主解
                 InsertStrategyOrder insertStrategyOrder = clazz.getAnnotation(InsertStrategyOrder.class);
-                if (insertStrategyOrder != null && clazz.isAssignableFrom(ISplitStrategy.class)) {
+                boolean assignableFrom = ISplitStrategy.class.isAssignableFrom(clazz);
+                if (insertStrategyOrder != null && assignableFrom) {
                     ISplitStrategy splitStrategy = initialObj.get(classname);
                     if (splitStrategy == null) {
                         Object instance = clazz.newInstance();
@@ -67,7 +69,7 @@ public class SplitAspect {
                     }
                 }
                 UpdateStrategyOrder updateStrategyOrder = clazz.getAnnotation(UpdateStrategyOrder.class);
-                if (updateStrategyOrder != null && clazz.isAssignableFrom(ISplitStrategy.class)) {
+                if (updateStrategyOrder != null && assignableFrom) {
                     ISplitStrategy splitStrategy = initialObj.get(classname);
                     if (splitStrategy == null) {
                         Object instance = clazz.newInstance();

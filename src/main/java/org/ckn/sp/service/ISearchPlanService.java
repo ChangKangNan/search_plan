@@ -35,11 +35,6 @@ public interface ISearchPlanService {
     Map<String,String> getAllResource();
 
     /**
-     *同步查询方案
-     */
-    Boolean syncSearchPlan(String resourceName);
-
-    /**
      *保存用户方案筛选项
      */
     PlanFilterDTO savePlanFilter(PlanFilterDTO planFilterDTO);

@@ -12,7 +12,10 @@ import static cn.ft.ckn.fastmapper.constants.SQLConstants.ORDER_BY;
  */
 public class SearchOrderByProvider {
     public static void handle(SearchQueryDTO searchQueryDTO) {
-        StrBuilder strBuilder=new StrBuilder(SearchPlanServiceImpl.QUERY_SQL_LOCAL.get());
+        if (searchQueryDTO.getDesc() == null || searchQueryDTO.getOrderBy() == null) {
+            return;
+        }
+        StrBuilder strBuilder = new StrBuilder(SearchPlanServiceImpl.QUERY_SQL_LOCAL.get());
         String orderBy = searchQueryDTO.getOrderBy();
         String direction = searchQueryDTO.getDesc() ? " DESC " : " ASC ";
         if (StrUtil.isNotBlank(orderBy)) {

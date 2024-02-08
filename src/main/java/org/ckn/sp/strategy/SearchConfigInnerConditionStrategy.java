@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import org.ckn.sp.annotation.InsertStrategyOrder;
+import org.ckn.sp.annotation.UpdateStrategyOrder;
 import org.ckn.sp.constants.StrConstants;
 import org.ckn.sp.fm.bean.SearchConfig;
 import org.ckn.sp.fm.bean.SearchConfigInfo;
@@ -12,6 +13,7 @@ import org.ckn.sp.fm.dao.SearchConfigInnerConditionMapper;
 import org.ckn.sp.strategy.api.ISplitStrategy;
 import org.ckn.sp.util.BusinessUtil;
 import org.ckn.sp.util.RegxUtil;
+import org.ckn.sp.util.SqlUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,11 +24,13 @@ import java.util.stream.Collectors;
  * @author ckn
  */
 @InsertStrategyOrder(index = 1)
+@UpdateStrategyOrder(index = 1)
 public class SearchConfigInnerConditionStrategy implements ISplitStrategy {
 
     @Override
     public void split(SearchConfig searchConfig) {
         String searchSql = searchConfig.getSearchSql();
+        searchSql = SqlUtil.replaceLineSeparator(searchSql);
         List<String> inner = RegxUtil.getInnerCondition(searchSql);
         String pageTag = searchConfig.getPageTag();
         if (CollUtil.isEmpty(inner)) {

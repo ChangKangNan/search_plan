@@ -6,6 +6,7 @@ import org.ckn.sp.annotation.UpdateStrategyOrder;
 import org.ckn.sp.fm.bean.SearchConfig;
 import org.ckn.sp.strategy.api.IGenerateStrategy;
 import org.ckn.sp.strategy.api.ISplitStrategy;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.List;
 /**
  * @author ckn
  */
+@Component
 public class GenerateUpdateStrategy implements IGenerateStrategy {
     private static final FastThreadLocal<List<ISplitStrategy>> handleList = new FastThreadLocal<>();
 

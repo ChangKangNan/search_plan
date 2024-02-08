@@ -61,12 +61,18 @@ public class SQLUtils {
             columnToInfos.put(searchTableColumn.getSearchTableColumn(),
                     searchTableColumnInfo);
         }
+       for (int i = 0; i < columnNames.size(); i++) {
+           if(columnNames.get(i).contains("/*alias")){
+               String s = columnNames.get(i);
+               columnNames.set(i,s.replaceAll("(.*)/\\*\\s*alias\\s*(.+)\\s*\\*/", "$2").trim());
+           }
+       }
         String[] columnAll = ArrayUtil.toArray(columnNames, String.class);
         List<String> columnShow=new ArrayList<>();
         for (int i = 0; i < columnAll.length; i++) {
             sqlBuilder.append(columnToInfos.get(columnAll[i]));
             log.info("{}", columnAll[i]);
-            columnShow.add(columnToInfos.get(columnAll[i]).trim());
+            columnShow.add(columnAll[i]);
             sqlBuilder.append(BLANK);
             sqlBuilder.append(AS);
             sqlBuilder.append(BLANK);
