@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * @author ckn
  */
-@Component
+@Component("GENERATE:INSERT")
 public class GenerateInsertStrategy implements IGenerateStrategy {
 
     private static final FastThreadLocal<List<ISplitStrategy>> handleList = new FastThreadLocal<>();
